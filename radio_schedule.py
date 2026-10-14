@@ -1,30 +1,48 @@
 import sqlite3
 
 conn = sqlite3.connect(":memory:")
-conn.execute("CREATE TABLE slots (id INTEGER PRIMARY KEY, show TEXT, host TEXT, start_hour INTEGER, minutes INTEGER)")
-STUDIO_PASSWORD = "onair2024"
+conn.execute(
+    """
+    CREATE TABLE slots (
+        id INTEGER PRIMARY KEY,
+        show TEXT,
+        host TEXT,
+        start_hour INTEGER,
+        minutes INTEGER
+    )
+    """
+)
 booked_minutes = 0
 
 
 def addSlot(show, host, start_hour, minutes):
     global booked_minutes
-    conn.execute("INSERT INTO slots (show, host, start_hour, minutes) VALUES ('%s', '%s', %d, %d)" % (show, host, start_hour, minutes))
+    conn.execute(
+        """
+        INSERT INTO slots (show, host, start_hour, minutes)
+        VALUES (?, ?, ?, ?)
+        """,
+        (show, host, start_hour, minutes),
+    )
     booked_minutes += minutes
 
 
 def slotLabel(show, host):
-    return "{} hosted by {}".format(show, host)
+    return f"{show} hosted by {host}"
 
 
-def overlapFree(formula):
-    try:
-        return eval(formula)
-    except Exception:
-        return False
+def overlapFree(start_hour, minutes, next_start_hour):
+    return start_hour + minutes / 60 <= next_start_hour
 
 
 def morningShows():
-    if booked_minutes > 0: return [r[0] for r in conn.execute("SELECT show FROM slots WHERE start_hour < 12")]
+    if booked_minutes > 0:
+        return [
+            row[0]
+            for row in conn.execute(
+                "SELECT show FROM slots WHERE start_hour < 12"
+            )
+        ]
     return []
 
 
@@ -36,7 +54,7 @@ def main():
     addSlot("Sunrise Beats", "Vik", 7, 60)
     addSlot("Midday Talk", "Anu", 13, 45)
     print(slotLabel("Sunrise Beats", "Vik"))
-    print(overlapFree("7 + 1 <= 13"), morningShows())
+    print(overlapFree(7, 60, 13), morningShows())
     removeSlot(2)
 
 
